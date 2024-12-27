@@ -25,7 +25,7 @@ from tkinter import Tk, Canvas, Button, PhotoImage, Label
 from tkinter.filedialog import askdirectory, askopenfilename
 from pathlib import Path
 OUTPUT_PATH = Path(__file__).parent
-ASSETS_PATH = OUTPUT_PATH / Path(r"C:\Users\hp\Desktop\project_deep\deep_project\build\assets\frame0") #صحصح واكتب المسار صح
+ASSETS_PATH = OUTPUT_PATH / Path(r"C:\Users\hp\Desktop\project_deep\deep_project\build\assets\frame0") #اكتب المسار الملف عندك صح
 
 
 def relative_to_assets(path: str) -> Path:
@@ -73,25 +73,24 @@ class Ai:
 
 
     def train(self):
-        data_dir = "data"  # مسار البيانات الرئيسي
+        #data_dir = "data"  
         train_dir = f"{self.dat}/test"
         val_dir = f"{self.dat}/val"
 
-    # تحويل الصور (تغيير الحجم، تطبيع)
         transform = transforms.Compose([
             transforms.Resize((128, 128)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         ])
 
-        # تحميل البيانات
+        # load data
         train_data = datasets.ImageFolder(train_dir, transform=transform)
         val_data = datasets.ImageFolder(val_dir, transform=transform)
 
         train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
         val_loader = DataLoader(val_data, batch_size=32, shuffle=False)
 
-        # بناء النموذج
+        # build model
         class SimpleCNN(nn.Module):
             def __init__(self, num_classes=2):
                 super(SimpleCNN, self).__init__()
@@ -116,15 +115,13 @@ class Ai:
                 x = self.fc_layers(x)
                 return x
 
-        # عدد الفئات
-        num_classes = 2  # "بطاقة" و"غير بطاقة"
+        # class number
+        num_classes = 2 
         model = SimpleCNN(num_classes=num_classes)
 
-        # دالة الخسارة والمُحسن
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-        # التدريب
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
 
@@ -146,7 +143,7 @@ class Ai:
 
                 print(f"Epoch {epoch+1}/{epochs}, Training Loss: {train_loss/len(train_loader):.4f}")
 
-                # تقييم النموذج
+                # evaluate model
                 model.eval()
                 val_loss = 0.0
                 correct = 0
@@ -164,11 +161,10 @@ class Ai:
 
                 print(f"Validation Loss: {val_loss/len(val_loader):.4f}, Accuracy: {100 * correct / total:.2f}%")
 
-        # بدء التدريب
+        #train_model
         train_model(model, train_loader, val_loader, criterion, optimizer, epochs=10)
 
-        # حفظ النموذج
-        torch.save(model.state_dict(), "card_classifier.pth")
+        torch.save(model.state_dict(), "card_classifier_new.pth")
         print("done")
         label_trained.config(text="Trained Succefully")
 
@@ -176,16 +172,12 @@ class Ai:
     def extract_id(self):
         pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-        # تحميل نموذج Haar Cascade للكشف عن الوجوه
         face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-        # تحميل الصورة التي تحتوي على البطاقة
         image = cv2.imread(self.imj)
 
-        # تحويل الصورة إلى تدرجات الرمادي
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # استخدام نموذج Haar للكشف عن الوجوه
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
         # إذا تم اكتشاف وجه، تحديد مكان البطاقة
@@ -231,7 +223,7 @@ class Ai:
                 print("Extracted 14-digit number:", number)
 
         print("\n*** Results specifically from Trunc_Filter ***")
-        cleaned_text = texts[2].replace(" ", "")  # إزالة المسافات
+        cleaned_text = texts[2].replace(" ", "")
         numbers = [cleaned_text[i:i+14] for i in range(0, len(cleaned_text), 14) if len(cleaned_text[i:i+14]) == 14]
         for number in numbers:
             print("Id from Trunc Filter ", number)
@@ -266,25 +258,23 @@ class Ai:
                 x = self.conv_layers(x)
                 x = self.fc_layers(x)
                 return x
-
-        # تحميل النموذج المدرب
+        #load model
         num_classes = 2
         model = SimpleCNN(num_classes=num_classes)
         model.load_state_dict(torch.load(self.algo))
         model.eval()
 
-        # إعداد التحويلات
         transform = transforms.Compose([
             transforms.Resize((128, 128)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         ])
 
-        # image_path = r"test\swe\27.jpg"  # ضع مسار الصورة هنا
+        # image_path = r"test\swe\27.jpg"  
         image = Image.open(self.imj)
-        image_tensor = transform(image).unsqueeze(0)  # تحويل الصورة إلى Tensor
+        image_tensor = transform(image).unsqueeze(0)  
 
-        # التنبؤ
+        # predict
         with torch.no_grad():
             output = model(image_tensor)
             _, predicted = torch.max(output, 1)
